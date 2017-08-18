@@ -63,23 +63,41 @@ def PTG(start_s, start_d, target_vehicle, delta, T, predictions):
             goals.append((perturbed[0], perturbed[1], t))
         all_goals += goals
         t += timestep
-    
+    flag=0
     # find best trajectory
     trajectories = []
     for goal in all_goals:
         s_goal, d_goal, t = goal
         s_coefficients = JMT(start_s, s_goal, t)
         d_coefficients = JMT(start_d, d_goal, t)
-        trajectories.append(tuple([s_coefficients, d_coefficients, t]))
+        trajectory = tuple([s_coefficients, d_coefficients, t])
+        if (feasJMT(trajectory)):
+            trajectories.append(trajectory)
     
-
     #for traj in trajectories:
-    print(len(trajectories))
     #show_trajectory2(trajectories)
-    best = min(trajectories, key=lambda tr: calculate_cost(tr, target_vehicle, delta, T, predictions, WEIGHTED_COST_FUNCTIONS))
-    calculate_cost(best, target_vehicle, delta, T, predictions, WEIGHTED_COST_FUNCTIONS, verbose=True)
-    return best
+    if len(trajectories)>0:
+        print (len(trajectories))
+        best = min(trajectories, key=lambda tr: calculate_cost(tr, target_vehicle, delta, T, predictions, WEIGHTED_COST_FUNCTIONS))
+        calculate_cost(best, target_vehicle, delta, T, predictions, WEIGHTED_COST_FUNCTIONS, verbose=True)
+        return best
+    else:
+        return None
+
+def feasJMT(trajectory):
+    s,d,T = trajectory
+    feas = True
     
+    for i in range(int(T/0.02)):
+        t = 0.02 * i
+        v = s[1] + 2*s[2]*t + 3*s[3]*t**2+4*s[4]*t**3+5*s[5]*t**4
+        a = 2*s[2]+6*s[3]*t+12*s[4]*t**2+20*s[5]*t**3
+        jerk = 6*s[3]+24*s[4]*t+60*s[5]*t**2
+        feas *= (0<=v<=SPEED_LIMIT)
+        feas *= (-MAX_ACCEL <=a <=MAX_ACCEL)
+        feas *= (-MAX_JERK <= jerk <= MAX_JERK)
+        
+    return (feas)
 
 def calculate_cost(trajectory, target_vehicle, delta, goal_t, predictions, cost_functions_with_weights, verbose=False):
     cost = 0
